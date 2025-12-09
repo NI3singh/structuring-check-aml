@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.production
+*.pem
+*.key
+secrets/
+
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+__pycache__/
+
+clean_system.py
+test_script.py
