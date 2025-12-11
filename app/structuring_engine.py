@@ -70,11 +70,20 @@ def _check_deposit(user_id: str, amount_cents: int):
     cnt_key = f"user:{user_id}:dep_cnt_24h"
     
     # ATOMIC OPERATIONS
-    new_vol_cents = redis_conn.incrby(vol_key, amount_cents)
-    redis_conn.expire(vol_key, 86400)
+    # new_vol_cents = redis_conn.incrby(vol_key, amount_cents)
+    # redis_conn.expire(vol_key, 86400)
     
+    # new_count = redis_conn.incr(cnt_key)
+    # redis_conn.expire(cnt_key, 86400)
+
+    new_vol_cents = redis_conn.incrby(vol_key, amount_cents)
+    # Only set TTL if key is new
+    if redis_conn.ttl(vol_key) == -1:
+        redis_conn.expire(vol_key, 86400)
+
     new_count = redis_conn.incr(cnt_key)
-    redis_conn.expire(cnt_key, 86400)
+    if redis_conn.ttl(cnt_key) == -1:
+        redis_conn.expire(cnt_key, 86400)
 
     new_vol_dollars = new_vol_cents / 100.0
 
@@ -138,14 +147,26 @@ def _check_withdrawal(user_id: str, amount_cents: int):
     cnt_key_24h = f"user:{user_id}:wd_cnt_24h"  # NEW: Track daily count
     
     # ATOMIC OPERATIONS
+    # new_vol_cents = redis_conn.incrby(vol_key, amount_cents)
+    # redis_conn.expire(vol_key, 86400)
+    
+    # new_count_1h = redis_conn.incr(cnt_key_1h)
+    # redis_conn.expire(cnt_key_1h, 3600)
+    
+    # new_count_24h = redis_conn.incr(cnt_key_24h)  # NEW
+    # redis_conn.expire(cnt_key_24h, 86400)
+
     new_vol_cents = redis_conn.incrby(vol_key, amount_cents)
-    redis_conn.expire(vol_key, 86400)
-    
+    if redis_conn.ttl(vol_key) == -1:
+        redis_conn.expire(vol_key, 86400)
+
     new_count_1h = redis_conn.incr(cnt_key_1h)
-    redis_conn.expire(cnt_key_1h, 3600)
-    
-    new_count_24h = redis_conn.incr(cnt_key_24h)  # NEW
-    redis_conn.expire(cnt_key_24h, 86400)
+    if redis_conn.ttl(cnt_key_1h) == -1:
+        redis_conn.expire(cnt_key_1h, 3600)
+
+    new_count_24h = redis_conn.incr(cnt_key_24h)
+    if redis_conn.ttl(cnt_key_24h) == -1:
+        redis_conn.expire(cnt_key_24h, 86400)
     
     new_vol_dollars = new_vol_cents / 100.0
 
@@ -272,8 +293,12 @@ def record_wager(user_id: str, wager_amount: float):
         wager_key = f"user:{user_id}:wagered_24h"
         
         # Atomically increment total wagered amount
+        # new_total_cents = redis_conn.incrby(wager_key, wager_cents)
+        # redis_conn.expire(wager_key, 86400)
+
         new_total_cents = redis_conn.incrby(wager_key, wager_cents)
-        redis_conn.expire(wager_key, 86400)
+        if redis_conn.ttl(wager_key) == -1:
+            redis_conn.expire(wager_key, 86400)
         
         logger.info(f"WAGER RECORDED: User={user_id}, Amount=${wager_amount:.2f}, Total=${new_total_cents/100:.2f}")
         
